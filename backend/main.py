@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from config import app, contacts_col, cache  # Import the cache object
+from config import app, contacts_col, cache
 from bson import ObjectId, errors
 from pymongo.errors import PyMongoError
 
@@ -12,9 +12,9 @@ def convert_objectid(data):
 
 
 @app.route("/contacts", methods=["GET"])
-@cache.cached(timeout=60) # Caches the output for 60 seconds
+@cache.cached(timeout=None)  # The cache will now persist indefinitely
 def get_contacts():
-    print("Fetching contacts from the database...") # This will help you see if caching works
+    print("Fetching contacts from the cache...")
     contacts = contacts_col.find()
     json_contacts = [convert_objectid(contact) for contact in contacts]
     return jsonify({"contacts": json_contacts})
@@ -45,7 +45,7 @@ def create_contact():
 
     try:
         contacts_col.insert_one(new_contact)
-        cache.clear() # Clears the cache after a new contact is created
+        cache.clear()  # Clears the cache after a new contact is created
     except PyMongoError as e:
         return jsonify({"message": str(e)}), 500
 
@@ -75,7 +75,7 @@ def update_contact(user_id):
     if update_data:
         try:
             contacts_col.update_one({"_id": object_id}, {"$set": update_data})
-            cache.clear() # Clears the cache after an update
+            cache.clear()  # Clears the cache after an update
         except PyMongoError as e:
             return jsonify({"message": str(e)}), 500
         return jsonify({"message": "User updated."}), 200
@@ -93,8 +93,8 @@ def delete_contact(user_id):
     result = contacts_col.delete_one({"_id": object_id})
     if result.deleted_count == 0:
         return jsonify({"message": "User not found"}), 404
-    
-    cache.clear() # Clears the cache after a deletion
+
+    cache.clear()  # Clears the cache after a deletion
     return jsonify({"message": "User deleted!"}), 200
 
 
